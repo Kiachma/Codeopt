@@ -46,57 +46,70 @@ float* makeKernel(double radius,int*ksize) {
 }
 
 void smooth(unsigned char* inPtr, unsigned char*outPtr, int, int ext[6], float*kernel,
-	    double scale, int size, int inIncX, int inIncY, int inIncZ, int outIncX,
+		double scale, int size, int inIncX, int inIncY, int inIncZ, int outIncX,
 	    int outIncY, int outIncZ) {
 
-  int uc,vc;
-  uc = size / 2;
-  vc = size / 2;
+	//int uc,vc;
+	//uc = size / 2;
+	//vc = size / 2;
+	int ux =size/2;
 
-  /* Check that the kernel has an odd size */
-  if ((size&1)!=1) {
-    printf("\n\n\n******* Error, convolution kernel size not odd *******\n\n\n");
-  }
-
-  int xmin,xmax,ymin,ymax;
-  int z = ext[4];
-  xmin=ext[0];
-  xmax=ext[1];
-  ymin=ext[2];
-  ymax=ext[3];
-
-  double sum;
-  int height = ymax, width = xmax;
-  int i=0;
-  unsigned char val;
-
-  for(int y=ymin; y<=ymax; y++) {
-    for(int x=xmin; x<=xmax; x++) {
-      sum = 0.0;
-      i = 0;
-
-      for(int v = -vc; v<=vc; v++) {
-	int ny=y+v;
-	for(int u = -uc; u<=uc; u++) {
-	  int nx=x+u;
-	  if (nx<=0) nx = 0;
-	  else if (nx>width) nx = width;
-	  if (ny<=0) ny = 0;
-	  else if (ny>height) ny = height;
-	  val = GET_AT(nx,ny,z,inPtr);
-	  sum += val*kernel[i++];
+	/* Check that the kernel has an odd size */
+	if ((size&1)!=1) {
+		printf("\n\n\n******* Error, convolution kernel size not odd *******\n\n\n");
 	}
-      }
-      SET_AT_OUT(x,y,z,outPtr,(unsigned char)(scale*sum));
-    }
-  }
+
+	int xmin,xmax,ymin,ymax;
+	int z = ext[4];
+	xmin=ext[0];
+	xmax=ext[1];
+	ymin=ext[2];
+	ymax=ext[3];
+
+	double sum;
+	//int height = ymax, width = xmax; onödig
+	int i=0;
+	//unsigned char val;
+	int ny,nx;
+	for(int y=ymin; y<=ymax; y++) {
+		for(int x=xmin; x<=xmax; x++) {
+			sum = 0.0;
+			i = 0;
+
+			if ((ux < x) && x < (xmax - ux) && (ux < y) && y < (ymax - ux)) {
+				for(int v = 0; v<size; v++) {
+					for(int u = 0; u<size; u++) {
+						sum += GET_AT(x-ux+v,y-ux+v,z,inPtr)*kernel[i++];
+					}
+				}
+			}else{
+				for(int v = 0; v<size; v++) {
+					ny=y-ux+v;
+					if (ny<=0)
+						ny = 0;
+					else if (ny>ymax)
+						ny = ymax;
+					for(int u = 0; u<size; u++) {
+						nx=x-ux+v;
+						if (nx<=0)
+							nx = 0;
+						else if (nx>xmax)
+							nx = xmax;
+						sum += GET_AT(nx,ny,z,inPtr) * kernel[i++];
+
+					}
+				}
+			}
+			SET_AT_OUT(x,y,z,outPtr,(unsigned char)(scale*sum));
+		}
+	}
 
 }
 
 int main(){
   /* Size of the images (use an even value) */
   const int width  = 2000;  /* Usa a small matrix if debug is set to 1 */
-  const int height = 2000;
+  const int height = 2000  ;
   const int iterations = 10;
   time_t start, stop;
   int i;
